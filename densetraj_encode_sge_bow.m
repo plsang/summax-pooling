@@ -89,8 +89,8 @@ function [ output_args ] = densetraj_encode_sge_bow( proj_name, szPat, enc_type,
    
 	pattern =  '(?<video>\w+)\.\w+\.frame(?<start_f>\d+)_(?<end_f>\d+)';
 	
-    count_not_exist = 0;
-    count_not_done = 0;
+    %count_not_exist = 0;
+    %count_not_done = 0;
 	
     for ii = start_seg:end_seg,
 		segment = segments{ii};
@@ -140,12 +140,9 @@ function [ output_args ] = densetraj_encode_sge_bow( proj_name, szPat, enc_type,
 		elseif segann_method == 1,
             
             if ~isfield(shot_infos, video),
-                count_not_exist = count_not_exist + 1;
-            else
-                count_not_done = count_not_done + 1;
+                fprintf('Video <%s> does not have info\n', video);
+				continue;
             end
-            
-            continue;
             
 			frame_idx = shot_infos.(video).scores < sim_threshold;
 			frame_infos = shot_infos.(video).frames(frame_idx);
@@ -217,7 +214,7 @@ function [ output_args ] = densetraj_encode_sge_bow( proj_name, szPat, enc_type,
 		
     end
 	
-    fprintf(' count_not_exist = %d. count_not_done = %d \n', count_not_exist, count_not_done);
+    %fprintf(' count_not_exist = %d. count_not_done = %d \n', count_not_exist, count_not_done);
 	quit;
 
 end
