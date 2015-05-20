@@ -1,4 +1,10 @@
-function med2012_video_pooling(feat_name, feat_dim)
+
+function med2012_segment_based_feature(feat_name, feat_dim, overlapping)
+
+	if ~exist('overlapping', 'var'),
+		overlapping = 0;
+	end
+	
 	filename='/net/per610a/export/das11f/plsang/trecvidmed/metadata/med12/medmd_2012.mat';
     fprintf('Loading meta file <%s>\n', filename);
     load(filename, 'MEDMD');
@@ -6,15 +12,19 @@ function med2012_video_pooling(feat_name, feat_dim)
 	root_fea_dir = '/net/per610a/export/das11f/plsang/trecvidmed/feature/med.pooling.seg4';
     fea_dir = sprintf('%s/%s', root_fea_dir, feat_name);
 	
-	output_dir = '/net/per610a/export/das11f/plsang/trecvidmed/feature/summax.pooling';
+	output_dir = '/net/per610a/export/das11f/plsang/trecvidmed/feature/segments';
 	
 	num_aggs = [2, 4, 8, 16, 32, 64];  %% 8, 16, 32, 64, 128, 256 s
 	
 	for num_agg = num_aggs,
 	
-		fprintf('Gen sum-max pooling with num_agg = %d, seg_len = %d \n', num_agg, 4*num_agg);
+		fprintf('Gen segment-based features with num_agg = %d, seg_len = %d \n', num_agg, 4*num_agg);
 		
-		output_fdir = sprintf('%s/%s.summax%d', output_dir, feat_name, 4*num_agg);
+		if overlapping == 0, % non overlapping
+			output_fdir = sprintf('%s/%s.summax%d', output_dir, feat_name, 4*num_agg);
+		else % overlapping, default 50%
+			output_fdir = sprintf('%s/%s.summax%d.ov50', output_dir, feat_name, 4*num_agg);
+		end	
 		
 		for ii=1:length(MEDMD.clips),
 			if ~mod(ii, 100), fprintf('%d ', ii); end;
@@ -28,7 +38,13 @@ function med2012_video_pooling(feat_name, feat_dim)
 			feat_file = sprintf('%s/%s.mat', fea_dir, feat_pat(1:end-4));
 			load(feat_file, 'code');
 			total_unit_seg = size(code, 2);
-			idxs = 1:num_agg:total_unit_seg;
+			
+			if overlapping == 0, % non overlapping
+				idxs = 1:num_agg:total_unit_seg;
+			else % overlapping, default 50%
+				idxs = 1:(num_agg/2):total_unit_seg; 
+			end
+			
 			featMat_ = zeros(feat_dim, length(idxs));
 			remove_last_seg = 0;
 			for jj=1:length(idxs),
@@ -55,15 +71,13 @@ function med2012_video_pooling(feat_name, feat_dim)
 				featMat(start_idx:end, :) = [];
 			end
 			
-			featMat_ = l2_norm_matrix(featMat_);
-			
-			code = max(featMat_, [], 2);
+			code = l2_norm_matrix(featMat_);
 			
 			if ~exist(fileparts(output_file), 'file'),
 				mkdir(fileparts(output_file));
 			end
 			
-			save(output_file, 'code');
+			save(output_file, 'code', '-v7.3');
 			
 		end
 		
